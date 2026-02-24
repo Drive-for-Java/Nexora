@@ -6,200 +6,314 @@ GatewayIntentBits,
 SlashCommandBuilder,
 Routes,
 REST,
-PermissionsBitField
+PermissionsBitField,
+ChannelType
 } = require("discord.js");
 
-const client = new Client({
- intents: [
-  GatewayIntentBits.Guilds,
-  GatewayIntentBits.GuildMessages,
-  GatewayIntentBits.MessageContent,
-  GatewayIntentBits.GuildMembers
- ]
-});
+const fs=require("fs");
 
 
-client.once("ready", () => {
+const client=new Client({
 
- console.log("🛡️ Nexora Online");
+intents:[
+GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMembers,
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.MessageContent
+]
 
 });
 
 
-client.on("interactionCreate", async interaction => {
+// WARN DATABASE
 
- if (!interaction.isChatInputCommand()) return;
+if(!fs.existsSync("warns.json"))
+fs.writeFileSync("warns.json","{}");
 
- const cmd = interaction.commandName;
 
 
+function log(text){
 
- // BAN COMMAND
+let ch=client.channels.cache.get(process.env.LOG_CHANNEL);
 
- if (cmd === "ban") {
+if(ch) ch.send(text);
 
- if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+}
 
- return interaction.reply({
- content:"❌ You are not allowed to use this command",
- ephemeral:true
- });
 
 
- const user = interaction.options.getUser("user");
- const reason = interaction.options.getString("reason") || "No reason";
+// READY
 
- const member = interaction.guild.members.cache.get(user.id);
+client.once("ready",()=>{
 
- if (!member)
- return interaction.reply("❌ User not found");
-
-
- await member.ban({reason});
-
- interaction.reply(`🔨 ${user.tag} banned\nReason: ${reason}`);
-
- }
-
-
-
-
- // KICK COMMAND
-
- if (cmd === "kick") {
-
- if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers))
-
- return interaction.reply({
- content:"❌ You are not allowed",
- ephemeral:true
- });
-
-
- const user = interaction.options.getUser("user");
- const reason = interaction.options.getString("reason") || "No reason";
-
- const member = interaction.guild.members.cache.get(user.id);
-
- if (!member)
- return interaction.reply("❌ User not found");
-
-
- await member.kick(reason);
-
- interaction.reply(`👢 ${user.tag} kicked\nReason: ${reason}`);
-
- }
-
-
-
-
- // MUTE COMMAND
-
- if (cmd === "mute") {
-
- if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
-
- return interaction.reply({
- content:"❌ You are not allowed",
- ephemeral:true
- });
-
-
- const user = interaction.options.getUser("user");
-
- const member = interaction.guild.members.cache.get(user.id);
-
- if (!member)
- return interaction.reply("❌ User not found");
-
-
- await member.timeout(600000);
-
- interaction.reply(`🔇 ${user.tag} muted for 10 minutes`);
-
- }
-
-
-
-
- // CLEAR COMMAND
-
- if (cmd === "clear") {
-
- if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages))
-
- return interaction.reply({
- content:"❌ You are not allowed",
- ephemeral:true
- });
-
-
- const amount = interaction.options.getInteger("amount");
-
- await interaction.channel.bulkDelete(amount);
-
- interaction.reply({
- content:`🧹 Deleted ${amount} messages`,
- ephemeral:true
- });
-
- }
-
-
-
- // PING
-
- if (cmd === "ping") {
-
- interaction.reply(`🏓 Pong\n${client.ws.ping}ms`);
-
- }
-
-
-
-
- // USERINFO
-
- if (cmd === "userinfo") {
-
- const user = interaction.options.getUser("user") || interaction.user;
-
- const member = interaction.guild.members.cache.get(user.id);
-
- interaction.reply(
-
- `👤 User Info
-
-Name: ${user.username}
-
-Joined: ${member.joinedAt.toDateString()}
-
-ID: ${user.id}`
-
- );
-
- }
-
-
-
+console.log("🛡️ Nexora v2 Online");
 
 });
 
 
 
+// WELCOME + AUTOROLE
 
-const commands = [
+client.on("guildMemberAdd",member=>{
+
+let ch=client.channels.cache.get(process.env.WELCOME_CHANNEL);
+
+if(ch)
+
+ch.send(`🎉 Welcome ${member}
+
+Enjoy your stay!`);
+
+
+
+if(process.env.AUTOROLE_ID){
+
+member.roles.add(process.env.AUTOROLE_ID);
+
+}
+
+
+
+log(`➕ ${member.user.tag} joined`);
+
+});
+
+
+
+client.on("guildMemberRemove",member=>{
+
+log(`➖ ${member.user.tag} left`);
+
+});
+
+
+
+// COMMANDS
+
+client.on("interactionCreate",async i=>{
+
+if(!i.isChatInputCommand()) return;
+
+let cmd=i.commandName;
+
+
+
+// BAN
+
+if(cmd==="ban"){
+
+if(!i.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+
+return i.reply({content:"❌ Mods only",ephemeral:true});
+
+
+let user=i.options.getUser("user");
+
+let reason=i.options.getString("reason")||"No reason";
+
+let m=i.guild.members.cache.get(user.id);
+
+if(!m) return i.reply("User not found");
+
+
+await m.ban({reason});
+
+i.reply(`🔨 ${user.tag} banned`);
+
+log(`🔨 ${user.tag} banned`);
+
+}
+
+
+
+// KICK
+
+if(cmd==="kick"){
+
+if(!i.member.permissions.has(PermissionsBitField.Flags.KickMembers))
+
+return i.reply({content:"❌ Mods only",ephemeral:true});
+
+
+let user=i.options.getUser("user");
+
+let m=i.guild.members.cache.get(user.id);
+
+if(!m) return i.reply("User not found");
+
+
+await m.kick();
+
+i.reply(`👢 ${user.tag} kicked`);
+
+log(`👢 ${user.tag} kicked`);
+
+}
+
+
+
+// MUTE
+
+if(cmd==="mute"){
+
+if(!i.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+
+return i.reply({content:"❌ Mods only",ephemeral:true});
+
+
+let user=i.options.getUser("user");
+
+let m=i.guild.members.cache.get(user.id);
+
+await m.timeout(600000);
+
+i.reply(`🔇 ${user.tag} muted`);
+
+log(`🔇 ${user.tag} muted`);
+
+}
+
+
+
+// CLEAR
+
+if(cmd==="clear"){
+
+if(!i.member.permissions.has(PermissionsBitField.Flags.ManageMessages))
+
+return i.reply({content:"❌ Mods only",ephemeral:true});
+
+
+let a=i.options.getInteger("amount");
+
+await i.channel.bulkDelete(a);
+
+i.reply({content:`🧹 ${a} deleted`,ephemeral:true});
+
+log(`🧹 ${a} messages deleted`);
+
+}
+
+
+
+// WARN
+
+if(cmd==="warn"){
+
+if(!i.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+
+return i.reply({content:"❌ Mods only",ephemeral:true});
+
+
+let user=i.options.getUser("user");
+
+let data=JSON.parse(fs.readFileSync("warns.json"));
+
+if(!data[user.id]) data[user.id]=0;
+
+data[user.id]++;
+
+fs.writeFileSync("warns.json",JSON.stringify(data));
+
+i.reply(`⚠️ ${user.tag} warned`);
+
+log(`⚠️ ${user.tag} warned`);
+
+}
+
+
+
+// WARNINGS
+
+if(cmd==="warnings"){
+
+let user=i.options.getUser("user");
+
+let data=JSON.parse(fs.readFileSync("warns.json"));
+
+let w=data[user.id]||0;
+
+i.reply(`⚠️ ${user.tag}
+
+Warnings: ${w}`);
+
+}
+
+
+
+// RESETWARN
+
+if(cmd==="resetwarn"){
+
+if(!i.member.permissions.has(PermissionsBitField.Flags.Administrator))
+
+return i.reply({content:"❌ Admin only",ephemeral:true});
+
+
+let user=i.options.getUser("user");
+
+let data=JSON.parse(fs.readFileSync("warns.json"));
+
+data[user.id]=0;
+
+fs.writeFileSync("warns.json",JSON.stringify(data));
+
+i.reply("Warnings reset");
+
+}
+
+
+
+// TICKET
+
+if(cmd==="ticket"){
+
+let channel=await i.guild.channels.create({
+
+name:`ticket-${i.user.username}`,
+
+type:ChannelType.GuildText,
+
+parent:process.env.TICKET_CATEGORY
+
+});
+
+channel.send(`🎫 ${i.user}
+
+Support will help you`);
+
+i.reply("Ticket created");
+
+}
+
+
+
+// PING
+
+if(cmd==="ping"){
+
+i.reply(`🏓 ${client.ws.ping}ms`);
+
+}
+
+
+});
+
+
+
+// SLASH COMMANDS
+
+const commands=[
 
 new SlashCommandBuilder()
 
 .setName("ban")
 
-.setDescription("Ban user")
+.setDescription("Ban")
 
-.addUserOption(o=>o.setName("user").setRequired(true).setDescription("User"))
+.addUserOption(o=>o.setName("user").setRequired(true))
 
-.addStringOption(o=>o.setName("reason").setDescription("Reason")),
+.addStringOption(o=>o.setName("reason")),
 
 
 
@@ -207,11 +321,9 @@ new SlashCommandBuilder()
 
 .setName("kick")
 
-.setDescription("Kick user")
+.setDescription("Kick")
 
-.addUserOption(o=>o.setName("user").setRequired(true).setDescription("User"))
-
-.addStringOption(o=>o.setName("reason").setDescription("Reason")),
+.addUserOption(o=>o.setName("user").setRequired(true)),
 
 
 
@@ -219,9 +331,9 @@ new SlashCommandBuilder()
 
 .setName("mute")
 
-.setDescription("Mute user")
+.setDescription("Mute")
 
-.addUserOption(o=>o.setName("user").setRequired(true).setDescription("User")),
+.addUserOption(o=>o.setName("user").setRequired(true)),
 
 
 
@@ -229,9 +341,47 @@ new SlashCommandBuilder()
 
 .setName("clear")
 
-.setDescription("Delete messages")
+.setDescription("Clear")
 
-.addIntegerOption(o=>o.setName("amount").setRequired(true).setDescription("Number")),
+.addIntegerOption(o=>o.setName("amount").setRequired(true)),
+
+
+
+new SlashCommandBuilder()
+
+.setName("warn")
+
+.setDescription("Warn")
+
+.addUserOption(o=>o.setName("user").setRequired(true)),
+
+
+
+new SlashCommandBuilder()
+
+.setName("warnings")
+
+.setDescription("See warnings")
+
+.addUserOption(o=>o.setName("user").setRequired(true)),
+
+
+
+new SlashCommandBuilder()
+
+.setName("resetwarn")
+
+.setDescription("Reset warnings")
+
+.addUserOption(o=>o.setName("user").setRequired(true)),
+
+
+
+new SlashCommandBuilder()
+
+.setName("ticket")
+
+.setDescription("Create ticket"),
 
 
 
@@ -239,17 +389,7 @@ new SlashCommandBuilder()
 
 .setName("ping")
 
-.setDescription("Bot ping"),
-
-
-
-new SlashCommandBuilder()
-
-.setName("userinfo")
-
-.setDescription("User info")
-
-.addUserOption(o=>o.setName("user").setDescription("User"))
+.setDescription("Ping")
 
 ].map(c=>c.toJSON());
 
@@ -269,7 +409,7 @@ Routes.applicationCommands(process.env.CLIENT_ID),
 
 );
 
-console.log("Commands Loaded");
+console.log("Commands loaded");
 
 })();
 
