@@ -1,12 +1,15 @@
 {
- "name":"nexora",
- "version":"1.0.0",
- "main":"index.js",
- "scripts":{
-  "start":"node index.js"
- },
- "dependencies":{
-  "discord.js":"^14.0.0",
-  "dotenv":"^16.0.0"
- }
+  "name": "nexora-bot",
+  "version": "2.0.0",
+  "description": "Discord bot to promote Java on Discord too. ",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.13.0",
+    "dotenv": "^16.0.0"
+  }
 }
